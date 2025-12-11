@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cat:*)",
+      "Bash(find:*)",
+      "Skill(superpowers:brainstorming)",
+      "Bash(go build:*)",
+      "Bash(./domains-cli:*)",
+      "Bash(chmod:*)"
+    ]
+  }
+}
