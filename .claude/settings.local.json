@@ -6,7 +6,8 @@
       "Skill(superpowers:brainstorming)",
       "Bash(go build:*)",
       "Bash(./domains-cli:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "WebFetch(domain:goreleaser.com)"
     ]
   }
 }

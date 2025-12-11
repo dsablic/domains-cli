@@ -13,14 +13,17 @@ builds:
     binary: domains
 
 archives:
-  - format: tar.gz
-    name_template: >-
+  - name_template: >-
       {{ .ProjectName }}_
       {{- .Os }}_
       {{- .Arch }}
     format_overrides:
       - goos: windows
-        format: zip
+        formats: [zip]
+      - goos: linux
+        formats: [tar.gz]
+      - goos: darwin
+        formats: [tar.gz]
 
 checksum:
   name_template: 'checksums.txt'
