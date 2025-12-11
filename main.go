@@ -12,17 +12,26 @@ import (
 func main() {
 	format := flag.String("format", "tsv", "Output format: tsv or json")
 	flag.StringVar(format, "f", "tsv", "Output format: tsv or json (shorthand)")
+	cert := flag.Bool("cert", false, "Fetch TLS certificate info (issuer, expiry)")
+	flag.BoolVar(cert, "c", false, "Fetch TLS certificate info (shorthand)")
+	showVersion := flag.Bool("version", false, "Print version and exit")
+	flag.BoolVar(showVersion, "v", false, "Print version and exit (shorthand)")
 	flag.Parse()
+
+	if *showVersion {
+		fmt.Println(Version())
+		return
+	}
 
 	types := NormalizeTypes(flag.Args())
 
-	if err := run(context.Background(), types, *format); err != nil {
+	if err := run(context.Background(), types, *format, *cert); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 }
 
-func run(ctx context.Context, types []string, format string) error {
+func run(ctx context.Context, types []string, format string, fetchCert bool) error {
 	cfg, err := LoadConfig()
 	if err != nil {
 		return err
@@ -85,6 +94,10 @@ func run(ctx context.Context, types []string, format string) error {
 		}
 		return records[i].Name < records[j].Name
 	})
+
+	if fetchCert {
+		FetchCertificates(records)
+	}
 
 	switch format {
 	case "json":
