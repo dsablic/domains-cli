@@ -4,6 +4,15 @@ CLI tool to list DNS records from Cloudflare and AWS Route53 with registrar dete
 
 ## Installation
 
+### Homebrew (macOS/Linux)
+
+```bash
+brew tap dsablic/tap
+brew install domains
+```
+
+### Go Install
+
 ```bash
 go install github.com/dsablic/domains-cli@latest
 ```
