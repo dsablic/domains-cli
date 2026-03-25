@@ -27,6 +27,18 @@ go vet ./...
 - No emojis in code, commit messages, or documentation
 - No comments - write self-documenting code
 
+## Documentation
+
+Before every commit, check if README.md needs updating. Search for references to changed functionality in README.md and CLAUDE.md.
+
+When making changes:
+
+- **New/changed CLI flags** - Update usage examples in README.md
+- **New/changed output columns** - Update the output tables in README.md
+- **New providers or integrations** - Update README.md features and configuration sections
+- **Changed registrar detection logic** - Update the Registrar Detection section in README.md
+- **Changed release process** - Update both README.md and CLAUDE.md
+
 ## Releasing
 
 Releases are automated via GitHub Actions + goreleaser. Version is injected at build time via `-ldflags -X main.version=...` from the git tag. There is no VERSION file.
