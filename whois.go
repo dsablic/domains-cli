@@ -4,18 +4,23 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/likexian/whois"
 )
 
 type WhoisClient struct {
-	cache map[string]string
-	mu    sync.Mutex
+	client *whois.Client
+	cache  map[string]string
+	mu     sync.Mutex
 }
 
 func NewWhoisClient() *WhoisClient {
+	client := whois.NewClient()
+	client.SetTimeout(10 * time.Second)
 	return &WhoisClient{
-		cache: make(map[string]string),
+		client: client,
+		cache:  make(map[string]string),
 	}
 }
 
@@ -39,7 +44,7 @@ func (c *WhoisClient) LookupRegistrar(domain string) string {
 }
 
 func (c *WhoisClient) fetchRegistrar(domain string) string {
-	result, err := whois.Whois(domain)
+	result, err := c.client.Whois(domain)
 	if err != nil {
 		return "unknown"
 	}

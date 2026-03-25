@@ -11,6 +11,8 @@ builds:
       - amd64
       - arm64
     binary: domains
+    ldflags:
+      - -s -w -X main.version={{.Version}}
 
 archives:
   - name_template: >-

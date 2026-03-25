@@ -9,9 +9,10 @@ import (
 )
 
 type CertInfo struct {
-	Issuer  string
-	Expires string
-	Error   string
+	Issuer     string
+	Expires    string
+	TLSVersion string
+	Error      string
 }
 
 func FetchCertificates(records []Record) {
@@ -28,11 +29,14 @@ func FetchCertificates(records []Record) {
 	var mu sync.Mutex
 	var wg sync.WaitGroup
 
+	sem := make(chan struct{}, 10)
 	for name := range lookupTargets {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
+			sem <- struct{}{}
 			info := lookupCert(name)
+			<-sem
 			mu.Lock()
 			results[name] = info
 			mu.Unlock()
@@ -45,12 +49,14 @@ func FetchCertificates(records []Record) {
 		if !shouldCheckCert(records[i].Type) {
 			records[i].CertIssuer = "n/a"
 			records[i].CertExpires = "n/a"
+			records[i].TLSVersion = "n/a"
 			continue
 		}
 
 		info := results[records[i].Name]
 		records[i].CertIssuer = info.Issuer
 		records[i].CertExpires = info.Expires
+		records[i].TLSVersion = info.TLSVersion
 		records[i].CertError = info.Error
 	}
 }
@@ -75,7 +81,8 @@ func lookupCert(hostname string) CertInfo {
 	}
 	defer conn.Close()
 
-	certs := conn.ConnectionState().PeerCertificates
+	state := conn.ConnectionState()
+	certs := state.PeerCertificates
 	if len(certs) == 0 {
 		return CertInfo{Error: "no certificate"}
 	}
@@ -92,8 +99,24 @@ func lookupCert(hostname string) CertInfo {
 	}
 
 	return CertInfo{
-		Issuer:  issuerStr,
-		Expires: cert.NotAfter.Format("2006-01-02"),
+		Issuer:     issuerStr,
+		Expires:    cert.NotAfter.Format("2006-01-02"),
+		TLSVersion: tlsVersionName(state.Version),
+	}
+}
+
+func tlsVersionName(version uint16) string {
+	switch version {
+	case tls.VersionTLS10:
+		return "TLS 1.0"
+	case tls.VersionTLS11:
+		return "TLS 1.1"
+	case tls.VersionTLS12:
+		return "TLS 1.2"
+	case tls.VersionTLS13:
+		return "TLS 1.3"
+	default:
+		return fmt.Sprintf("unknown (0x%04x)", version)
 	}
 }
 

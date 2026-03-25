@@ -7,14 +7,13 @@ import (
 	"strings"
 )
 
-func OutputTSV(w io.Writer, records []Record) error {
-	hasCert := len(records) > 0 && (records[0].CertIssuer != "" || records[0].CertExpires != "" || records[0].CertError != "")
+func OutputTSV(w io.Writer, records []Record, hasCert bool) error {
 
 	if hasCert {
-		fmt.Fprintln(w, "domain\trecord\tvalue\ttype\tsource\tregistrar\tcert_issuer\tcert_expires\tcert_error")
+		fmt.Fprintln(w, "domain\trecord\tvalue\ttype\tsource\tregistrar\tcert_issuer\tcert_expires\ttls_version\tcert_error")
 		for _, r := range records {
-			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-				r.Domain, r.Name, r.Value, r.Type, r.Source, r.Registrar, r.CertIssuer, r.CertExpires, r.CertError)
+			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+				r.Domain, r.Name, r.Value, r.Type, r.Source, r.Registrar, r.CertIssuer, r.CertExpires, r.TLSVersion, r.CertError)
 		}
 	} else {
 		fmt.Fprintln(w, "domain\trecord\tvalue\ttype\tsource\tregistrar")

@@ -86,7 +86,7 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 	records = append(records, r53Records...)
 
 	whoisClient := NewWhoisClient()
-	resolveRegistrars(records, cfClient, r53Client, whoisClient)
+	resolveRegistrars(records, r53Client, whoisClient)
 
 	sort.Slice(records, func(i, j int) bool {
 		if records[i].Domain != records[j].Domain {
@@ -100,35 +100,46 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 	}
 
 	switch format {
+	case "tsv":
+		return OutputTSV(os.Stdout, records, fetchCert)
 	case "json":
 		return OutputJSON(os.Stdout, records)
 	default:
-		return OutputTSV(os.Stdout, records)
+		return fmt.Errorf("unknown output format %q (supported: tsv, json)", format)
 	}
 }
 
-func resolveRegistrars(records []Record, cfClient *CloudflareClient, r53Client *Route53Client, whoisClient *WhoisClient) {
-	resolved := make(map[string]string)
+func resolveRegistrars(records []Record, r53Client *Route53Client, whoisClient *WhoisClient) {
+	domains := make(map[string]struct{})
+	for _, r := range records {
+		domains[r.Domain] = struct{}{}
+	}
+
+	resolved := make(map[string]string, len(domains))
+	var mu sync.Mutex
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, 5)
+
+	for domain := range domains {
+		wg.Add(1)
+		go func(d string) {
+			defer wg.Done()
+			sem <- struct{}{}
+			registrar := resolveRegistrar(d, r53Client, whoisClient)
+			<-sem
+			mu.Lock()
+			resolved[d] = registrar
+			mu.Unlock()
+		}(domain)
+	}
+	wg.Wait()
 
 	for i := range records {
-		domain := records[i].Domain
-
-		if registrar, ok := resolved[domain]; ok {
-			records[i].Registrar = registrar
-			continue
-		}
-
-		registrar := resolveRegistrar(domain, cfClient, r53Client, whoisClient)
-		resolved[domain] = registrar
-		records[i].Registrar = registrar
+		records[i].Registrar = resolved[records[i].Domain]
 	}
 }
 
-func resolveRegistrar(domain string, cfClient *CloudflareClient, r53Client *Route53Client, whoisClient *WhoisClient) string {
-	if cfClient != nil && cfClient.IsCloudflareRegistrar(domain) {
-		return "cloudflare"
-	}
-
+func resolveRegistrar(domain string, r53Client *Route53Client, whoisClient *WhoisClient) string {
 	if r53Client != nil && r53Client.IsRoute53Registrar(domain) {
 		return "route53"
 	}

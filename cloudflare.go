@@ -9,8 +9,9 @@ import (
 )
 
 type CloudflareClient struct {
-	api   *cloudflare.API
-	zones []cloudflare.Zone
+	api     *cloudflare.API
+	zones   []cloudflare.Zone
+	zoneMap map[string]cloudflare.Zone
 }
 
 func NewCloudflareClient(cfg CloudflareConfig) (*CloudflareClient, error) {
@@ -32,6 +33,10 @@ func (c *CloudflareClient) FetchRecords(ctx context.Context, types []string) ([]
 		return nil, fmt.Errorf("failed to list cloudflare zones: %w", err)
 	}
 	c.zones = zones
+	c.zoneMap = make(map[string]cloudflare.Zone, len(zones))
+	for _, z := range zones {
+		c.zoneMap[z.Name] = z
+	}
 
 	var records []Record
 	for _, zone := range zones {
@@ -81,19 +86,14 @@ func (c *CloudflareClient) fetchZoneRecords(ctx context.Context, zone cloudflare
 	return records, nil
 }
 
-func (c *CloudflareClient) Zones() []cloudflare.Zone {
-	return c.zones
-}
-
-func (c *CloudflareClient) IsCloudflareRegistrar(domain string) bool {
-	for _, zone := range c.zones {
-		if zone.Name == domain {
-			for _, ns := range zone.NameServers {
-				if strings.HasSuffix(ns, ".ns.cloudflare.com") {
-					return true
-				}
-			}
-			return false
+func (c *CloudflareClient) IsCloudflareDNS(domain string) bool {
+	zone, ok := c.zoneMap[domain]
+	if !ok {
+		return false
+	}
+	for _, ns := range zone.NameServers {
+		if strings.HasSuffix(ns, ".ns.cloudflare.com") {
+			return true
 		}
 	}
 	return false
