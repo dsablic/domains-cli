@@ -72,18 +72,24 @@ func TestOutputTSV_NoCert(t *testing.T) {
 func TestOutputTSV_WithCert(t *testing.T) {
 	records := []Record{
 		{Domain: "example.com", Name: "example.com", Value: "1.2.3.4", Type: "A", Source: "cloudflare", Registrar: "test",
-			CertIssuer: "Let's Encrypt", CertExpires: "2025-01-01", TLSVersion: "TLS 1.3"},
+			CertIssuer: "Let's Encrypt", CertExpires: "2025-01-01", TLSMinVersion: "TLS 1.2", TLSMaxVersion: "TLS 1.3"},
 	}
 	var buf bytes.Buffer
 	if err := OutputTSV(&buf, records, true); err != nil {
 		t.Fatal(err)
 	}
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if !strings.Contains(lines[0], "tls_version") {
-		t.Error("missing tls_version header")
+	if !strings.Contains(lines[0], "tls_min") {
+		t.Error("missing tls_min header")
+	}
+	if !strings.Contains(lines[0], "tls_max") {
+		t.Error("missing tls_max header")
+	}
+	if !strings.Contains(lines[1], "TLS 1.2") {
+		t.Error("missing TLS min version in data")
 	}
 	if !strings.Contains(lines[1], "TLS 1.3") {
-		t.Error("missing TLS version in data")
+		t.Error("missing TLS max version in data")
 	}
 }
 

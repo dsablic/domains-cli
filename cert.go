@@ -9,10 +9,11 @@ import (
 )
 
 type CertInfo struct {
-	Issuer     string
-	Expires    string
-	TLSVersion string
-	Error      string
+	Issuer        string
+	Expires       string
+	TLSMinVersion string
+	TLSMaxVersion string
+	Error         string
 }
 
 func FetchCertificates(records []Record) {
@@ -49,14 +50,16 @@ func FetchCertificates(records []Record) {
 		if !shouldCheckCert(records[i].Type) {
 			records[i].CertIssuer = "n/a"
 			records[i].CertExpires = "n/a"
-			records[i].TLSVersion = "n/a"
+			records[i].TLSMinVersion = "n/a"
+			records[i].TLSMaxVersion = "n/a"
 			continue
 		}
 
 		info := results[records[i].Name]
 		records[i].CertIssuer = info.Issuer
 		records[i].CertExpires = info.Expires
-		records[i].TLSVersion = info.TLSVersion
+		records[i].TLSMinVersion = info.TLSMinVersion
+		records[i].TLSMaxVersion = info.TLSMaxVersion
 		records[i].CertError = info.Error
 	}
 }
@@ -98,11 +101,34 @@ func lookupCert(hostname string) CertInfo {
 		issuerStr = "unknown"
 	}
 
+	minVersion := probeMinTLSVersion(hostname)
+
 	return CertInfo{
-		Issuer:     issuerStr,
-		Expires:    cert.NotAfter.Format("2006-01-02"),
-		TLSVersion: tlsVersionName(state.Version),
+		Issuer:        issuerStr,
+		Expires:       cert.NotAfter.Format("2006-01-02"),
+		TLSMinVersion: minVersion,
+		TLSMaxVersion: tlsVersionName(state.Version),
 	}
+}
+
+func probeMinTLSVersion(hostname string) string {
+	versions := []uint16{tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12, tls.VersionTLS13}
+	dialer := &net.Dialer{Timeout: 3 * time.Second}
+
+	for _, v := range versions {
+		conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
+			ServerName:         hostname,
+			InsecureSkipVerify: true,
+			MinVersion:         v,
+			MaxVersion:         v,
+		})
+		if err != nil {
+			continue
+		}
+		conn.Close()
+		return tlsVersionName(v)
+	}
+	return "unknown"
 }
 
 func tlsVersionName(version uint16) string {

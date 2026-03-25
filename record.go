@@ -9,6 +9,7 @@ type Record struct {
 	Registrar   string `json:"registrar"`
 	CertIssuer  string `json:"cert_issuer,omitempty"`
 	CertExpires string `json:"cert_expires,omitempty"`
-	TLSVersion  string `json:"tls_version,omitempty"`
+	TLSMinVersion string `json:"tls_min_version,omitempty"`
+	TLSMaxVersion string `json:"tls_max_version,omitempty"`
 	CertError   string `json:"cert_error,omitempty"`
 }

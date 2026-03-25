@@ -33,7 +33,7 @@ domains-cli ns
 domains-cli -f json
 domains-cli --format json A CNAME
 
-# Include TLS certificate info (issuer, expiry, TLS version)
+# Include TLS certificate and version info
 domains-cli --cert
 domains-cli -c -f json A CNAME
 ```
@@ -57,7 +57,8 @@ With `--cert` flag, additional columns:
 |--------|-------------|
 | cert_issuer | Certificate issuer (e.g., "Let's Encrypt", "Amazon") |
 | cert_expires | Certificate expiry date (YYYY-MM-DD) |
-| tls_version | Negotiated TLS version (e.g., "TLS 1.3") |
+| tls_min | Minimum TLS version accepted by server (e.g., "TLS 1.2") |
+| tls_max | Maximum TLS version negotiated (e.g., "TLS 1.3") |
 | cert_error | Error if cert lookup failed (e.g., "timeout", "connection refused") |
 
 Certificate lookups are performed for A, AAAA, and CNAME records. Other record types show "n/a".
