@@ -15,11 +15,11 @@ type CloudflareClient struct {
 }
 
 func NewCloudflareClient(cfg CloudflareConfig) (*CloudflareClient, error) {
-	if cfg.APIKey == "" || cfg.Email == "" {
+	if cfg.APIToken == "" {
 		return nil, nil
 	}
 
-	api, err := cloudflare.New(cfg.APIKey, cfg.Email)
+	api, err := cloudflare.NewWithAPIToken(cfg.APIToken)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create cloudflare client: %w", err)
 	}

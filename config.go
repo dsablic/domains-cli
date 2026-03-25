@@ -9,8 +9,7 @@ import (
 )
 
 type CloudflareConfig struct {
-	APIKey string `yaml:"api_key"`
-	Email  string `yaml:"email"`
+	APIToken string `yaml:"api_token"`
 }
 
 type Config struct {
@@ -20,9 +19,8 @@ type Config struct {
 func LoadConfig() (*Config, error) {
 	cfg := &Config{}
 
-	if apiKey := os.Getenv("CLOUDFLARE_API_KEY"); apiKey != "" {
-		cfg.Cloudflare.APIKey = apiKey
-		cfg.Cloudflare.Email = os.Getenv("CLOUDFLARE_EMAIL")
+	if apiToken := os.Getenv("CLOUDFLARE_API_TOKEN"); apiToken != "" {
+		cfg.Cloudflare.APIToken = apiToken
 		return cfg, nil
 	}
 

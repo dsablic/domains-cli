@@ -67,8 +67,7 @@ Certificate lookups are performed for A, AAAA, and CNAME records. Other record t
 ### Environment Variables
 
 ```bash
-export CLOUDFLARE_API_KEY="your-api-key"
-export CLOUDFLARE_EMAIL="your-email@example.com"
+export CLOUDFLARE_API_TOKEN="your-api-token"
 ```
 
 AWS credentials use the standard SDK chain (environment variables, `~/.aws/credentials`, IAM roles).
@@ -79,8 +78,7 @@ Create `~/.config/domains/config.yaml`:
 
 ```yaml
 cloudflare:
-  api_key: "your-api-key"
-  email: "your-email@example.com"
+  api_token: "your-api-token"
 ```
 
 Environment variables take precedence over the config file.
