@@ -4,13 +4,24 @@ import (
 	"testing"
 )
 
+type mockRegistrarLookup struct {
+	registrar string
+	calls     int
+}
+
+func (m *mockRegistrarLookup) LookupRegistrar(domain string) string {
+	m.calls++
+	return m.registrar
+}
+
 func TestResolveRegistrar_Route53(t *testing.T) {
-	whois := NewWhoisClient()
-	// nil r53Client should fall through to WHOIS
-	result := resolveRegistrar("example.com", nil, whois)
-	// We can't predict WHOIS result, but it shouldn't panic
-	if result == "" {
-		t.Error("expected non-empty registrar")
+	mock := &mockRegistrarLookup{registrar: "some-registrar"}
+	result := resolveRegistrar("example.com", nil, mock)
+	if result != "some-registrar" {
+		t.Errorf("expected %q, got %q", "some-registrar", result)
+	}
+	if mock.calls != 1 {
+		t.Errorf("expected 1 lookup call, got %d", mock.calls)
 	}
 }
 
@@ -21,18 +32,20 @@ func TestResolveRegistrars_Caching(t *testing.T) {
 		{Domain: "test2.example", Name: "a.test2.example"},
 	}
 
-	whois := NewWhoisClient()
-	resolveRegistrars(records, nil, whois)
+	mock := &mockRegistrarLookup{registrar: "mock-registrar"}
+	resolveRegistrars(records, nil, mock)
 
-	// All records for the same domain should have the same registrar
 	if records[0].Registrar != records[1].Registrar {
 		t.Errorf("same domain got different registrars: %q vs %q", records[0].Registrar, records[1].Registrar)
 	}
 
-	// All records should have some registrar set
 	for i, r := range records {
-		if r.Registrar == "" {
-			t.Errorf("record %d has empty registrar", i)
+		if r.Registrar != "mock-registrar" {
+			t.Errorf("record %d: expected %q, got %q", i, "mock-registrar", r.Registrar)
 		}
+	}
+
+	if mock.calls != 2 {
+		t.Errorf("expected 2 lookup calls (one per unique domain), got %d", mock.calls)
 	}
 }

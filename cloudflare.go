@@ -86,19 +86,6 @@ func (c *CloudflareClient) fetchZoneRecords(ctx context.Context, zone cloudflare
 	return records, nil
 }
 
-func (c *CloudflareClient) IsCloudflareDNS(domain string) bool {
-	zone, ok := c.zoneMap[domain]
-	if !ok {
-		return false
-	}
-	for _, ns := range zone.NameServers {
-		if strings.HasSuffix(ns, ".ns.cloudflare.com") {
-			return true
-		}
-	}
-	return false
-}
-
 func matchesType(recordType string, types []string) bool {
 	if len(types) == 0 {
 		return true

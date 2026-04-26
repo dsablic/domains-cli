@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"net"
@@ -16,7 +17,7 @@ type CertInfo struct {
 	Error         string
 }
 
-func FetchCertificates(records []Record) {
+func FetchCertificates(ctx context.Context, records []Record) {
 	lookupTargets := make(map[string][]int)
 
 	for i, r := range records {
@@ -36,7 +37,7 @@ func FetchCertificates(records []Record) {
 		go func(name string) {
 			defer wg.Done()
 			sem <- struct{}{}
-			info := lookupCert(name)
+			info := lookupCert(ctx, name)
 			<-sem
 			mu.Lock()
 			results[name] = info
@@ -73,18 +74,22 @@ func shouldCheckCert(recordType string) bool {
 	}
 }
 
-func lookupCert(hostname string) CertInfo {
-	dialer := &net.Dialer{Timeout: 5 * time.Second}
-	conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
-		ServerName:         hostname,
-		InsecureSkipVerify: true,
-	})
+func lookupCert(ctx context.Context, hostname string) CertInfo {
+	dialer := &tls.Dialer{
+		NetDialer: &net.Dialer{Timeout: 5 * time.Second},
+		Config: &tls.Config{
+			ServerName:         hostname,
+			InsecureSkipVerify: true,
+		},
+	}
+	conn, err := dialer.DialContext(ctx, "tcp", hostname+":443")
 	if err != nil {
 		return CertInfo{Error: formatCertError(err)}
 	}
 	defer conn.Close()
 
-	state := conn.ConnectionState()
+	tlsConn := conn.(*tls.Conn)
+	state := tlsConn.ConnectionState()
 	certs := state.PeerCertificates
 	if len(certs) == 0 {
 		return CertInfo{Error: "no certificate"}
@@ -101,7 +106,7 @@ func lookupCert(hostname string) CertInfo {
 		issuerStr = "unknown"
 	}
 
-	minVersion := probeMinTLSVersion(hostname)
+	minVersion := probeMinTLSVersion(ctx, hostname)
 
 	return CertInfo{
 		Issuer:        issuerStr,
@@ -111,17 +116,20 @@ func lookupCert(hostname string) CertInfo {
 	}
 }
 
-func probeMinTLSVersion(hostname string) string {
+func probeMinTLSVersion(ctx context.Context, hostname string) string {
 	versions := []uint16{tls.VersionTLS10, tls.VersionTLS11, tls.VersionTLS12, tls.VersionTLS13}
-	dialer := &net.Dialer{Timeout: 3 * time.Second}
 
 	for _, v := range versions {
-		conn, err := tls.DialWithDialer(dialer, "tcp", hostname+":443", &tls.Config{
-			ServerName:         hostname,
-			InsecureSkipVerify: true,
-			MinVersion:         v,
-			MaxVersion:         v,
-		})
+		dialer := &tls.Dialer{
+			NetDialer: &net.Dialer{Timeout: 3 * time.Second},
+			Config: &tls.Config{
+				ServerName:         hostname,
+				InsecureSkipVerify: true,
+				MinVersion:         v,
+				MaxVersion:         v,
+			},
+		}
+		conn, err := dialer.DialContext(ctx, "tcp", hostname+":443")
 		if err != nil {
 			continue
 		}

@@ -109,3 +109,43 @@ func TestOutputJSON(t *testing.T) {
 		t.Errorf("unexpected parsed result: %+v", parsed)
 	}
 }
+
+func TestSanitizeTSV(t *testing.T) {
+	tests := []struct {
+		input string
+		want  string
+	}{
+		{"hello", "hello"},
+		{"has\ttab", "has tab"},
+		{"has\nnewline", "has newline"},
+		{"has\r\nwindows", "has windows"},
+		{"mixed\t\n\r", "mixed  "},
+	}
+	for _, tt := range tests {
+		got := sanitizeTSV(tt.input)
+		if got != tt.want {
+			t.Errorf("sanitizeTSV(%q) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestOutputTSV_SanitizesValues(t *testing.T) {
+	records := []Record{
+		{Domain: "example.com", Name: "example.com", Value: "val\twith\ttabs", Type: "TXT", Source: "cloudflare", Registrar: "test"},
+	}
+	var buf bytes.Buffer
+	if err := OutputTSV(&buf, records, false); err != nil {
+		t.Fatal(err)
+	}
+	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("expected 2 lines, got %d", len(lines))
+	}
+	fields := strings.Split(lines[1], "\t")
+	if len(fields) != 6 {
+		t.Errorf("expected 6 tab-separated fields, got %d: %v", len(fields), fields)
+	}
+	if fields[2] != "val with tabs" {
+		t.Errorf("expected sanitized value %q, got %q", "val with tabs", fields[2])
+	}
+}

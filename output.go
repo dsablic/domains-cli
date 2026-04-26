@@ -8,21 +8,28 @@ import (
 )
 
 func OutputTSV(w io.Writer, records []Record, hasCert bool) error {
-
 	if hasCert {
 		fmt.Fprintln(w, "domain\trecord\tvalue\ttype\tsource\tregistrar\tcert_issuer\tcert_expires\ttls_min\ttls_max\tcert_error")
 		for _, r := range records {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
-				r.Domain, r.Name, r.Value, r.Type, r.Source, r.Registrar, r.CertIssuer, r.CertExpires, r.TLSMinVersion, r.TLSMaxVersion, r.CertError)
+				sanitizeTSV(r.Domain), sanitizeTSV(r.Name), sanitizeTSV(r.Value), sanitizeTSV(r.Type),
+				sanitizeTSV(r.Source), sanitizeTSV(r.Registrar), sanitizeTSV(r.CertIssuer), sanitizeTSV(r.CertExpires),
+				sanitizeTSV(r.TLSMinVersion), sanitizeTSV(r.TLSMaxVersion), sanitizeTSV(r.CertError))
 		}
 	} else {
 		fmt.Fprintln(w, "domain\trecord\tvalue\ttype\tsource\tregistrar")
 		for _, r := range records {
 			fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\t%s\n",
-				r.Domain, r.Name, r.Value, r.Type, r.Source, r.Registrar)
+				sanitizeTSV(r.Domain), sanitizeTSV(r.Name), sanitizeTSV(r.Value), sanitizeTSV(r.Type),
+				sanitizeTSV(r.Source), sanitizeTSV(r.Registrar))
 		}
 	}
 	return nil
+}
+
+func sanitizeTSV(s string) string {
+	r := strings.NewReplacer("\t", " ", "\n", " ", "\r", "")
+	return r.Replace(s)
 }
 
 func OutputJSON(w io.Writer, records []Record) error {

@@ -32,6 +32,10 @@ func main() {
 }
 
 func run(ctx context.Context, types []string, format string, fetchCert bool) error {
+	if format != "tsv" && format != "json" {
+		return fmt.Errorf("unknown output format %q (supported: tsv, json)", format)
+	}
+
 	cfg, err := LoadConfig()
 	if err != nil {
 		return err
@@ -96,7 +100,7 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 	})
 
 	if fetchCert {
-		FetchCertificates(records)
+		FetchCertificates(ctx, records)
 	}
 
 	switch format {
@@ -105,11 +109,11 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 	case "json":
 		return OutputJSON(os.Stdout, records)
 	default:
-		return fmt.Errorf("unknown output format %q (supported: tsv, json)", format)
+		return nil
 	}
 }
 
-func resolveRegistrars(records []Record, r53Client *Route53Client, whoisClient *WhoisClient) {
+func resolveRegistrars(records []Record, r53Client *Route53Client, lookup RegistrarLookup) {
 	domains := make(map[string]struct{})
 	for _, r := range records {
 		domains[r.Domain] = struct{}{}
@@ -125,7 +129,7 @@ func resolveRegistrars(records []Record, r53Client *Route53Client, whoisClient *
 		go func(d string) {
 			defer wg.Done()
 			sem <- struct{}{}
-			registrar := resolveRegistrar(d, r53Client, whoisClient)
+			registrar := resolveRegistrar(d, r53Client, lookup)
 			<-sem
 			mu.Lock()
 			resolved[d] = registrar
@@ -139,10 +143,10 @@ func resolveRegistrars(records []Record, r53Client *Route53Client, whoisClient *
 	}
 }
 
-func resolveRegistrar(domain string, r53Client *Route53Client, whoisClient *WhoisClient) string {
+func resolveRegistrar(domain string, r53Client *Route53Client, lookup RegistrarLookup) string {
 	if r53Client != nil && r53Client.IsRoute53Registrar(domain) {
 		return "route53"
 	}
 
-	return whoisClient.LookupRegistrar(domain)
+	return lookup.LookupRegistrar(domain)
 }

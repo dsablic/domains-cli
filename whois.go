@@ -9,6 +9,10 @@ import (
 	"github.com/likexian/whois"
 )
 
+type RegistrarLookup interface {
+	LookupRegistrar(domain string) string
+}
+
 type WhoisClient struct {
 	client *whois.Client
 	cache  map[string]string
