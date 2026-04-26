@@ -41,10 +41,8 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 		return err
 	}
 
-	var records []Record
 	var cfClient *CloudflareClient
 	var r53Client *Route53Client
-	var cfErr, r53Err error
 	var cfRecords, r53Records []Record
 
 	var wg sync.WaitGroup
@@ -52,42 +50,44 @@ func run(ctx context.Context, types []string, format string, fetchCert bool) err
 
 	go func() {
 		defer wg.Done()
-		cfClient, cfErr = NewCloudflareClient(cfg.Cloudflare)
-		if cfErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: cloudflare: %v\n", cfErr)
+		var err error
+		cfClient, err = NewCloudflareClient(cfg.Cloudflare)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cloudflare: %v\n", err)
 			return
 		}
 		if cfClient == nil {
 			fmt.Fprintln(os.Stderr, "warning: cloudflare credentials not configured, skipping")
 			return
 		}
-		cfRecords, cfErr = cfClient.FetchRecords(ctx, types)
-		if cfErr != nil {
-			fmt.Fprintf(os.Stderr, "warning: cloudflare: %v\n", cfErr)
+		cfRecords, err = cfClient.FetchRecords(ctx, types)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: cloudflare: %v\n", err)
 		}
 	}()
 
 	go func() {
 		defer wg.Done()
-		r53Client, r53Err = NewRoute53Client(ctx)
-		if r53Err != nil {
-			fmt.Fprintf(os.Stderr, "warning: route53: %v\n", r53Err)
+		var err error
+		r53Client, err = NewRoute53Client(ctx)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: route53: %v\n", err)
 			return
 		}
-		r53Records, r53Err = r53Client.FetchRecords(ctx, types)
-		if r53Err != nil {
-			fmt.Fprintf(os.Stderr, "warning: route53: %v\n", r53Err)
+		r53Records, err = r53Client.FetchRecords(ctx, types)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "warning: route53: %v\n", err)
+			r53Client = nil
 		}
 	}()
 
 	wg.Wait()
 
 	if cfClient == nil && r53Client == nil {
-		return fmt.Errorf("no credentials configured for cloudflare or aws")
+		return fmt.Errorf("no DNS providers available (check cloudflare and aws credentials)")
 	}
 
-	records = append(records, cfRecords...)
-	records = append(records, r53Records...)
+	records := append(cfRecords, r53Records...)
 
 	whoisClient := NewWhoisClient()
 	resolveRegistrars(records, r53Client, whoisClient)

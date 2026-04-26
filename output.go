@@ -27,9 +27,10 @@ func OutputTSV(w io.Writer, records []Record, hasCert bool) error {
 	return nil
 }
 
+var tsvReplacer = strings.NewReplacer("\t", " ", "\n", " ", "\r", "")
+
 func sanitizeTSV(s string) string {
-	r := strings.NewReplacer("\t", " ", "\n", " ", "\r", "")
-	return r.Replace(s)
+	return tsvReplacer.Replace(s)
 }
 
 func OutputJSON(w io.Writer, records []Record) error {

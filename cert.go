@@ -18,12 +18,10 @@ type CertInfo struct {
 }
 
 func FetchCertificates(ctx context.Context, records []Record) {
-	lookupTargets := make(map[string][]int)
-
-	for i, r := range records {
+	targets := make(map[string]struct{})
+	for _, r := range records {
 		if shouldCheckCert(r.Type) {
-			name := r.Name
-			lookupTargets[name] = append(lookupTargets[name], i)
+			targets[r.Name] = struct{}{}
 		}
 	}
 
@@ -32,7 +30,7 @@ func FetchCertificates(ctx context.Context, records []Record) {
 	var wg sync.WaitGroup
 
 	sem := make(chan struct{}, 10)
-	for name := range lookupTargets {
+	for name := range targets {
 		wg.Add(1)
 		go func(name string) {
 			defer wg.Done()
